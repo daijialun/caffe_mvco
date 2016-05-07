@@ -1,6 +1,6 @@
 # Caffe_MVCO
 
-Caffe_MVCO is a modified version of Caffe for implementing the classification of MVCO 103 dataset.
+Caffe_MVCO is a modified version of Caffe for implementing the classification of MVCO 103 classes dataset. 
 
 ## Caffe
 

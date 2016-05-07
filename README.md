@@ -1,5 +1,8 @@
-<<<<<<< HEAD
-# Caffe
+# Caffe_MVCO
+
+Caffe_MVCO is a modified version of Caffe for implementing the classification of MVCO 103 dataset.
+
+## Caffe
 
 [![Build Status](https://travis-ci.org/BVLC/caffe.svg?branch=master)](https://travis-ci.org/BVLC/caffe)
 [![License](https://img.shields.io/badge/license-BSD-blue.svg)](LICENSE)
@@ -16,13 +19,6 @@ Check out the [project site](http://caffe.berkeleyvision.org) for all the detail
 
 and step-by-step examples.
 
-[![Join the chat at https://gitter.im/BVLC/caffe](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/BVLC/caffe?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-
-Please join the [caffe-users group](https://groups.google.com/forum/#!forum/caffe-users) or [gitter chat](https://gitter.im/BVLC/caffe) to ask questions and talk about methods and models.
-Framework development discussions and thorough bug reports are collected on [Issues](https://github.com/BVLC/caffe/issues).
-
-Happy brewing!
-
 ## License and Citation
 
 Caffe is released under the [BSD 2-Clause license](https://github.com/BVLC/caffe/blob/master/LICENSE).
@@ -36,8 +32,4 @@ Please cite Caffe in your publications if it helps your research:
       Title = {Caffe: Convolutional Architecture for Fast Feature Embedding},
       Year = {2014}
     }
-=======
-# caffe_mvco
 
-The modified version of caffe for the classification in mvco 103 dataset.
->>>>>>> 8f9497abceb21f37bb9eaedd9965868d2e3cfe9a

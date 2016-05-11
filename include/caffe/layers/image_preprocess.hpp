@@ -18,7 +18,7 @@ namespace caffe {
    template <typename Dtype>
    class PreprocessLayer : public layer<Dtype> {
        public:
-           explicit PreprocessLayer (const LayerParameter& param);
+           explicit PreprocessLayer () {} ;
            // LayerSetUp: implements common data layer setup functionality, and 
            // calls DataLayerSetUp to do special data layer setup for layer types.
            virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom, 
@@ -27,9 +27,13 @@ namespace caffe {
            				const vector<Blob<Dtype>*> top) override;
            virtual void Reshape(const vector<Blob<Dtype>*>& bottom, 
            				const vector<Blob<Dtype>*> top) override;
+           
+           virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom, 
+                  const vector<Blob<Dtype>*> top) override;
 
+           /*
            // Returns the exact number of bottom and top blobs required by the layer.
-           virtual int ExactNumBottomBlobs() const;
+           virtual inline int ExactNumBottomBlobs() const { return };
            virtual int ExactNumTopBlobs() const;
            virtual bool EqualNumBottomTopBlobs() const;
 
@@ -51,29 +55,8 @@ namespace caffe {
            	    	    << " Layer produces one top blob as output for each "
            	    	    << "bottom blob input. ";
            	    }
-           }
+           }*/
 
-           int bottom_num=bottom.size();
-           int v=0, n=0;
-           for(v=0; v<bottom_num; ++v)  {
-           	  const batch_size = bottom[v]->num();
-           	  const int channel = bottom[v]->channels();
-           	  const int height = bottom[v]->height();
-           	  const int width = bottom[v]->width();
-
-           	  const Dtype* ptr_blob_data = NULL;
-           	  if(bottom[v]->channels == 3)
-           	  	auto type=CV_32FC3;
-           	  else
-           	  	auto type=CV_32FC1;
-           	  for(n=0; n<bottom[v]->num(); n++)  {
-           	  	ptr_blob_data = bottom[v]->cpu_data() + bottom[v]->offset(n);
-           	  	Mat img(bottom[v]->height, bottom[v]->width, type);
-           	  }
-           	  
-
-
-           }
            
 
 

@@ -1,8 +1,9 @@
 #include <iostream>
+#include <vector>
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
-#include "caffe/layers/image_preprocess.hpp"
+#include "caffe/layers/preprocess_layer.hpp"
 
 namespace caffe {
 
@@ -77,8 +78,7 @@ namespace caffe {
    }
 
 
-
 INSTANTIATE_CLASS(PreprocessLayer);
-//REGISTER_LAYER_CLASS(Preprocess);
+REGISTER_LAYER_CLASS(Preprocess);
 } // namespace caffe
 

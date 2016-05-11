@@ -1,14 +1,14 @@
-#ifdef USE_OPENCV
+#ifndef CAFFE_PREPROCESS_LAYER_HPP_
+#define CAFFE_PREPROCESS_LAYER_HPP_
 
-#include <glog/gloging>
 #include <iostream>
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
 #include "caffe/blob.hpp"
-#include "caffe/comon.hpp"
+#include "caffe/common.hpp"
 #include "caffe/layer.hpp"
-#include "caffe/protp/caffe.pb.h"
+#include "caffe/proto/caffe.pb.h"
 
 namespace caffe {
 
@@ -16,14 +16,14 @@ namespace caffe {
    * @brief   Preprocess the images in network	
    */
    template <typename Dtype>
-   class PreprocessLayer : public layer<Dtype> {
+   class PreprocessLayer : public Layer<Dtype> {
        public:
              explicit PreprocessLayer (const LayerParameter& param) 
-                  : layer<Dtype>(param) {} ;
+                  : Layer<Dtype>(param) {} ;
            // LayerSetUp: implements common data layer setup functionality, and 
            // calls DataLayerSetUp to do special data layer setup for layer types.
              virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom, 
-           				const vector<Blob<Dtype>*> top) override {};
+           				const vector<Blob<Dtype>*>& top) {};
 
              virtual inline int ExactNumBottomBlobs() const { return 1; }
              virtual inline int ExactNumTopBlobs() const { return 1; }
@@ -31,10 +31,10 @@ namespace caffe {
              //virtual inline int MaxTopBlobs() const { return 1; }
 
              virtual void Reshape(const vector<Blob<Dtype>*>& bottom, 
-           				const vector<Blob<Dtype>*> top) override;
+           				const vector<Blob<Dtype>*>& top);
 
              virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom, 
-                    const vector<Blob<Dtype>*> top) override;
+                    const vector<Blob<Dtype>*>& top);
 
              virtual inline const char* type() const { return "Preprocess"; }
 

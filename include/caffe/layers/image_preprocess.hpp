@@ -18,48 +18,30 @@ namespace caffe {
    template <typename Dtype>
    class PreprocessLayer : public layer<Dtype> {
        public:
-           explicit PreprocessLayer () {} ;
+             explicit PreprocessLayer (const LayerParameter& param) 
+                  : layer<Dtype>(param) {} ;
            // LayerSetUp: implements common data layer setup functionality, and 
            // calls DataLayerSetUp to do special data layer setup for layer types.
-           virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom, 
+             virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom, 
+           				const vector<Blob<Dtype>*> top) override {};
+
+             virtual inline int ExactNumBottomBlobs() const { return 1; }
+             virtual inline int ExactNumTopBlobs() const { return 1; }
+             //virtual inline int MinBottomBlobs() const { return 1; }
+             //virtual inline int MaxTopBlobs() const { return 1; }
+
+             virtual void Reshape(const vector<Blob<Dtype>*>& bottom, 
            				const vector<Blob<Dtype>*> top) override;
-           virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom, 
-           				const vector<Blob<Dtype>*> top) override;
-           virtual void Reshape(const vector<Blob<Dtype>*>& bottom, 
-           				const vector<Blob<Dtype>*> top) override;
-           
-           virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom, 
-                  const vector<Blob<Dtype>*> top) override;
 
-           /*
-           // Returns the exact number of bottom and top blobs required by the layer.
-           virtual inline int ExactNumBottomBlobs() const { return };
-           virtual int ExactNumTopBlobs() const;
-           virtual bool EqualNumBottomTopBlobs() const;
+             virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom, 
+                    const vector<Blob<Dtype>*> top) override;
 
-           // Called by SetUp() to check that the number of bottom and top Blobs
-           virtual void ChechBlobCounts(const vector<Blob<Dtype>*>& bottom, 
-           				const vector<Blob<Dtype>*> top) override;  {
-           	    if(ExactNumBottomBlobs >= 0)  {
-           	    	CHECK_EQ(ExactNumBottomBlobs(), bottom.size() )
-           	    	    << type() << " Layer takes" << ExactNumBottomBlobs()
-           	    	    << "bottom blob as input.";
-           	    }
-           	    if(ExactNumTopBlobs >= 0)  {
-           	    	CHECK_EQ(ExactNumTopBlobs(), bottom.size() )
-           	    	    << type() << " Layer produces" << ExactNumTopBlobs()
-           	    	    << "bottom blob as output.";
-           	    }
-           	    if( EqualNumBottomTopBlobs() )  {
-           	    	CHECK_EQ(bottom.size(), top.size()) << type()
-           	    	    << " Layer produces one top blob as output for each "
-           	    	    << "bottom blob input. ";
-           	    }
-           }*/
-
-           
+             virtual inline const char* type() const { return "Preprocess"; }
 
 
+       protected:
+             int channels_;
+             int height_, width_;
    };
 } // namespace caffe
 

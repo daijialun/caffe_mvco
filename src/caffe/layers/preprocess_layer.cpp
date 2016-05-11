@@ -74,7 +74,7 @@ namespace caffe {
                           } // width
                     }  // height
                 } // batch_size
-            } // bottom.size()
+             } // bottom.size()
    }
 
 

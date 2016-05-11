@@ -1352,5 +1352,5 @@ message PReLUParameter {
 
 message PreprocessParameter {
   // Use or not
-  optional bool status = 1;
+  optional bool status = 1 [default = false];
 }

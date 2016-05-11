@@ -2,7 +2,6 @@
 #define CAFFE_PREPROCESS_LAYER_HPP_
 
 #include <vector>
-#include <iostream>
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
@@ -21,11 +20,9 @@ namespace caffe {
              explicit PreprocessLayer (const LayerParameter& param) 
                   : Layer<Dtype>(param) {} ;
              virtual void Reshape(const vector<Blob<Dtype>*>& bottom, 
-                  const vector<Blob<Dtype>*>& top) {};
+                  const vector<Blob<Dtype>*>& top);
            // LayerSetUp: implements common data layer setup functionality, and 
            // calls DataLayerSetUp to do special data layer setup for layer types.
-             virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom, 
-           				const vector<Blob<Dtype>*>& top) {};
 
              virtual inline const char* type() const { return "Preprocess"; }
              virtual inline int ExactNumBottomBlobs() const { return 1; }
@@ -35,10 +32,14 @@ namespace caffe {
 
        protected:     
              virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom, 
-                    const vector<Blob<Dtype>*>& top) {};
+                    const vector<Blob<Dtype>*>& top) ;
+             //virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom, 
+                    //const vector<Blob<Dtype>*>& top) {};
 
-             virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom, 
-                    const vector<Blob<Dtype>*>& top) {} ;
+             virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {};
+             //virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
+      //const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
 
    };
 } // namespace caffe

@@ -68,14 +68,10 @@ namespace caffe {
                     cv::Mat dstCanny(img.size(), img.type());
                     dstCanny= cv::Scalar::all(0);
                     img.copyTo( dstCanny, CannyEdge);
-
-                    //*******Shapen********//
-                    //cv::Mat kernel = (cv::Mat_<float>(3,3) << 0,-1,0,-1,5,-1,0,-1,0);
-                    //cv::filter2D(img, img_aug, img.depth(), kernel);
-                    // 图像处理结果为src
+                    // ******* 双边滤波 ****** //
                     cv::bilateralFilter(dstCanny, img, 15, 15*2, 15/2 );
-                    cv::imshow("img", img);
-                    cv::waitKey();
+                    /*cv::imshow("img", img);
+                    cv::waitKey();*/
 
                     // 将 Mat 图像 img 转化为 top_blob
                     int top_index=0;                  
@@ -93,7 +89,7 @@ namespace caffe {
                     }  // height
 
                     // *********** test ************//
-                    top_image_data = top[i]->mutable_cpu_data() + top[i]->offset(n);
+                    /*top_image_data = top[i]->mutable_cpu_data() + top[i]->offset(n);
                     vector<cv::Mat> tests;                  
                     for(int c=0; c<channel_num; ++c)  {                     
                       cv::Mat channel(height, width, CV_32FC1, top_image_data);
@@ -104,9 +100,8 @@ namespace caffe {
                     cv::merge(tests, test);
                     test.convertTo(test, CV_8U);
                     cv::imshow("transform", test);
-                    cv::waitKey();
-
-
+                    cv::waitKey();*/
+                    
                 } // batch_size
              } // bottom.size()
    }

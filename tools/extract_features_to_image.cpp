@@ -145,6 +145,7 @@ int arg_pos = 0;  // the name of the executable
             //Mat img;
             //mat_out_feature_image[i].convertTo(img, CV_8UC1);
             std::cout << i << std::endl;
+            mat_out_feature_image[i].convertTo(mat_out_feature_image[i], CV_8U);
             cv::imshow("Mat feature", mat_out_feature_image[i]);
             cv::waitKey();
      }

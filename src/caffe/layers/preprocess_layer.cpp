@@ -37,12 +37,12 @@ namespace caffe {
               // Blob to Mat to Blob
              for(int i=0; i<bottom.size(); i++)  {
 
+                std::cout << "Num: " << i << std::endl;
                 const int batch_size = bottom[i]->num();
                 const int channel_num = bottom[i]->channels();
                 const int height = bottom[i]->height();
                 const int width = bottom[i]->width();
 
-                std::cout << batch_size << " " << channel_num << " " << height << " " << width << std::endl;
                 CHECK( height>0 && width>0 && channel_num>0 && batch_size>0) << "One of Num, "
                   "Channel, Height or Width is set as zero.";
 
@@ -102,6 +102,65 @@ namespace caffe {
                     cv::imshow("transform", test);
                     cv::waitKey();*/
                     
+                } // batch_size
+             } // bottom.size()
+   }
+
+ template <typename Dtype>
+   void PreprocessLayer<Dtype> :: Forward_gpu( const vector<Blob<Dtype>*>& bottom, 
+                  const vector<Blob<Dtype>*>& top)   {
+
+              /*for(int i=0; i<bottom.size(); i++)  
+                  top[i]->CopyFrom((*bottom[i]));*/
+
+              // Blob to Mat to Blob
+             for(int i=0; i<bottom.size(); i++)  {
+
+                std::cout << "Num: " << i << std::endl;
+                const int batch_size = bottom[i]->num();
+                const int channel_num = bottom[i]->channels();
+                const int height = bottom[i]->height();
+                const int width = bottom[i]->width();
+
+                CHECK( height>0 && width>0 && channel_num>0 && batch_size>0) << "One of Num, "
+                  "Channel, Height or Width is set as zero.";
+
+                for(int n=0; n<batch_size; ++n)  {
+                    Dtype* bottom_image_data = bottom[i]->mutable_gpu_data() + bottom[i]->offset(n);
+                    vector<cv::Mat> channels;
+                    
+                    for(int c=0; c<channel_num; ++c)  {                     
+                      cv::Mat channel(height, width, CV_32FC1, bottom_image_data);
+                      channels.push_back(channel);
+                      bottom_image_data += height*width;
+                    }
+                     
+                    cv::Mat img;
+                    cv::merge(channels, img);
+                    
+                    
+                    cv::Mat CannyEdge;
+                    img.convertTo(img, CV_8U);
+                    cv::blur( img, CannyEdge, cv::Size(3,3) );
+                    cv::Canny( CannyEdge, CannyEdge, 10, 10*3, 3 );
+                    cv::Mat dstCanny(img.size(), img.type());
+                    dstCanny= cv::Scalar::all(0);
+                    img.copyTo( dstCanny, CannyEdge);
+                    cv::bilateralFilter(dstCanny, img, 15, 15*2, 15/2 );
+                    
+                    int top_index=0;                  
+                    Dtype* top_image_data = top[i]->mutable_gpu_data() + top[i]->offset(n);
+                    for(int h=0; h<height; ++h)  {
+                         uchar* ptr = img.ptr<uchar>(h);
+                         int img_index=0;
+                         for(int c=0; c<channel_num; ++c)  {
+                                for(int w=0; w<width; ++w)  {
+                                    
+                                    top_index = ( h * channel_num + c ) * width + w;
+                                    top_image_data[top_index] = static_cast<Dtype>(ptr[img_index++]);
+                               }   
+                          } 
+                    } 
                 } // batch_size
              } // bottom.size()
    }

@@ -397,6 +397,7 @@ message LayerParameter {
   optional WindowDataParameter window_data_param = 129;
   optional PreprocessParameter Preprocess_param = 148;
   optional MeanParameter mean_param = 149;
+  optional ScharrParameter scharr_param = 150;
 }
 
 // Message that stores parameters used to apply transformation
@@ -1361,4 +1362,9 @@ message MeanParameter {
   optional string mean_file  =1;
   // mean_value
   repeated float mean_value=2;
+}
+
+message ScharrParameter {
+ // Use or not
+ optional bool status = 1 [default = false];
 }

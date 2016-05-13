@@ -396,6 +396,7 @@ message LayerParameter {
   optional TileParameter tile_param = 138;
   optional WindowDataParameter window_data_param = 129;
   optional PreprocessParameter Preprocess_param = 148;
+  optional MeanParameter mean_param = 149;
 }
 
 // Message that stores parameters used to apply transformation
@@ -1353,4 +1354,11 @@ message PReLUParameter {
 message PreprocessParameter {
   // Use or not
   optional bool status = 1 [default = false];
+}
+
+message MeanParameter {
+  // mean_file
+  optional string mean_file  =1;
+  // mean_value
+  repeated float mean_value=2;
 }

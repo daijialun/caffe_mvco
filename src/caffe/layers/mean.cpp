@@ -105,6 +105,6 @@ namespace caffe {
        }                   
 
 INSTANTIATE_CLASS(MeanLayer);
-//REGISTER_LAYER_CLASS(Mean);
+REGISTER_LAYER_CLASS(Mean);
 } // namespace caffe
 

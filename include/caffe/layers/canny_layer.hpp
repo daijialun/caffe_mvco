@@ -1,5 +1,5 @@
-#ifndef CAFFE_PREPROCESS_LAYER_HPP_
-#define CAFFE_PREPROCESS_LAYER_HPP_
+#ifndef CAFFE_CANNY_LAYER_HPP_
+#define CAFFE_CANNY_LAYER_HPP_
 
 #include <vector>
 #include <opencv2/core/core.hpp>
@@ -15,16 +15,16 @@ namespace caffe {
    * @brief   Preprocess the images in network	
    */
    template <typename Dtype>
-   class PreprocessLayer : public Layer<Dtype> {
+   class CannyLayer : public Layer<Dtype> {
        public:
-             explicit PreprocessLayer (const LayerParameter& param) 
+             explicit CannyLayer (const LayerParameter& param) 
                   : Layer<Dtype>(param) {} ;
              virtual void Reshape(const vector<Blob<Dtype>*>& bottom, 
                   const vector<Blob<Dtype>*>& top);
            // LayerSetUp: implements common data layer setup functionality, and 
            // calls DataLayerSetUp to do special data layer setup for layer types.
 
-             virtual inline const char* type() const { return "Preprocess"; }
+             virtual inline const char* type() const { return "Canny"; }
              virtual inline int ExactNumBottomBlobs() const { return 1; }
              virtual inline int ExactNumTopBlobs() const { return 1; }
              //virtual inline int MinBottomBlobs() const { return 1; }

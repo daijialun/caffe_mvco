@@ -4,7 +4,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
-#include "caffe/layers/preprocess_layer.hpp"
+#include "caffe/layers/canny_layer.hpp"
 
 namespace caffe {
 
@@ -13,7 +13,7 @@ namespace caffe {
    */
 
    template <typename Dtype>
-   void PreprocessLayer<Dtype> :: Reshape(const vector<Blob<Dtype>*>& bottom, 
+   void CannyLayer<Dtype> :: Reshape(const vector<Blob<Dtype>*>& bottom, 
             const vector<Blob<Dtype>*>& top)  {
             for(int i=0; i<bottom.size(); i++)  {
                 CHECK_EQ( 4, bottom[0]->num_axes() ) << "Input must have 4 axes.";
@@ -28,7 +28,7 @@ namespace caffe {
    }
 
    template <typename Dtype>
-   void PreprocessLayer<Dtype> :: Forward_cpu( const vector<Blob<Dtype>*>& bottom, 
+   void CannyLayer<Dtype> :: Forward_cpu( const vector<Blob<Dtype>*>& bottom, 
                   const vector<Blob<Dtype>*>& top)   {
 
 
@@ -102,7 +102,7 @@ namespace caffe {
              } // bottom.size()
    }
 
-INSTANTIATE_CLASS(PreprocessLayer);
-REGISTER_LAYER_CLASS(Preprocess);
+INSTANTIATE_CLASS(CannyLayer);
+REGISTER_LAYER_CLASS(Canny);
 } // namespace caffe
 

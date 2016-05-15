@@ -124,6 +124,5 @@ int arg_pos = 0;  // the name of the executable
     }  // for (int i = 0; i < num_features; ++i)
   }  // for (int batch_index = 0; batch_index < num_mini_batches; ++batch_index)
 
-  LOG(ERROR)<< "Successfully extracted the features!";
   return 0;
 }

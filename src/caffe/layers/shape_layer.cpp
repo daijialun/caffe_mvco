@@ -52,11 +52,11 @@ namespace caffe {
                       channels.push_back(channel);
                       bottom_image_data += height*width;
                     }
-                     // **** bottom_image_data to Mat ***** //
+                     // **** Source Image Mat ***** //
                     cv::Mat src;
                     cv::merge(channels, src);
 
-                    // ******* 双边滤波 ****** //
+                    // ***** BilateralFilter ***** //
                     cv::Mat filter;
                     cv::bilateralFilter(src, filter, 10, 10*2, 10/2 );
 
@@ -70,10 +70,14 @@ namespace caffe {
                     cv::convertScaleAbs(scharrGY, scharrAGY);
                     cv::addWeighted(scharrAGX, 0.5, scharrAGY, 0.5, 0, scharrDst);
 
-                     cv::threshold(scharrDst, src, 100, 255, cv::THRESH_BINARY);
+                    // ********** Threshold *********** //
+                     Mat binary;
+                     cv::threshold(scharrDst, binary, 100, 255, cv::THRESH_BINARY);
+
+                     // ********* Contours *********** //
                      vector< vector<cv::Point> > contours;
-                      cv::findContours(src, contours,CV_RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-                      cv::Mat result( src.size(), CV_8U, cv::Scalar(0) );
+                      cv::findContours(binary, contours,CV_RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+                      cv::Mat result( binary.size(), CV_8U, cv::Scalar(0) );
                       cv::drawContours( result, contours, -1, cv::Scalar(255), CV_FILLED );
 
                     // Mat to top_blob

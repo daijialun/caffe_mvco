@@ -398,6 +398,7 @@ message LayerParameter {
   optional PreprocessParameter Preprocess_param = 148;
   optional MeanParameter mean_param = 149;
   optional ScharrParameter scharr_param = 150;
+  optional ShapeParameter shapre_param = 151;
 }
 
 // Message that stores parameters used to apply transformation
@@ -1365,6 +1366,11 @@ message MeanParameter {
 }
 
 message ScharrParameter {
+ // Use or not
+ optional bool status = 1 [default = false];
+}
+
+message ShapeParameter {
  // Use or not
  optional bool status = 1 [default = false];
 }

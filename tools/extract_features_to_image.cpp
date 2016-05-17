@@ -17,7 +17,6 @@
 
 using caffe::Blob;
 using caffe::Caffe;
-using caffe::Datum;
 using caffe::Net;
 using caffe::vector;
 using std::string;
@@ -35,7 +34,7 @@ int main(int argc, char** argv) {
 template<typename Dtype>
 int feature_extraction_pipeline(int argc, char** argv) {
   ::google::InitGoogleLogging(argv[0]);
-  const int num_required_args = 6;
+  const int num_required_args = 5;
   if (argc < num_required_args) {
     LOG(ERROR)<<
     "This program takes in a trained network and an input data layer, and then"
@@ -93,12 +92,6 @@ int arg_pos = 0;  // the name of the executable
   std::vector<std::string> blob_names;
   boost::split(blob_names, extract_feature_blob_names, boost::is_any_of(","));
 
-  std::string save_feature_dataset_names(argv[++arg_pos]);
-  std::vector<std::string> dataset_names;
-  boost::split(dataset_names, save_feature_dataset_names,
-               boost::is_any_of(","));
-  CHECK_EQ(blob_names.size(), dataset_names.size()) <<
-      " the number of blob names and dataset names must be equal";
   size_t num_features = blob_names.size();
 
   for (size_t i = 0; i < num_features; i++) {

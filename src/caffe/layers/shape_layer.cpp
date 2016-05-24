@@ -71,7 +71,7 @@ namespace caffe {
                     cv::addWeighted(scharrAGX, 0.5, scharrAGY, 0.5, 0, scharrDst);
 
                     // ********** Threshold *********** //
-                     Mat binary;
+                     cv::Mat binary;
                      cv::threshold(scharrDst, binary, 100, 255, cv::THRESH_BINARY);
 
                      // ********* Contours *********** //

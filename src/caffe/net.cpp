@@ -531,20 +531,153 @@ void Net<Dtype>::AppendParam(const NetParameter& param, const int layer_id,
     }
   }
 }
-
+template <typename Dtype>
+int Net<Dtype>::Get_dimension()
+{
+	const int dim = bottom_vecs_[layers_.size() - 1][0]->count() / bottom_vecs_[layers_.size() - 1][1]->count();
+	
+	return dim;
+}
+template <typename Dtype>
+void Net<Dtype>::Initial_conf_m()
+{
+	const int dim=Get_dimension();
+	acc = new Dtype[dim];
+	class_num = new Dtype[dim];
+	conf_m = new Dtype*[dim];
+	for (int j = 0; j < dim; j++)
+	{
+		acc[j] = 0;
+		class_num[j] = 0;
+		conf_m[j] = new Dtype[dim];
+		for (int k = 0; k < dim; k++)
+		{
+			conf_m[j][k] = 0;
+		}
+	}
+}
+template <typename Dtype>
+void Net<Dtype>::Print_conf_m()
+{
+	FILE* fp = fopen("conf_m.txt", "w");
+	fprintf(fp, "confusion matrix\n");
+	const int dim = Get_dimension();
+	for (int j = 0; j < dim; j++)
+	{
+		for (int k = 0; k < dim; k++)
+		{
+			fprintf(fp, "%lf\t", conf_m[j][k]);
+		}
+		fprintf(fp, "\n");
+	}
+	Dtype avg_acc = 0;
+	Dtype weight_acc = 0;
+	fprintf(fp, "acc\n");
+	for (int j = 0; j < dim; j++)
+	{
+		weight_acc += acc[j];
+		fprintf(fp, "%lf\t", acc[j] / class_num[j]);
+		avg_acc += acc[j] / class_num[j];
+	}
+	Dtype total_num = 0;
+	fprintf(fp, "\nclass_num\n");
+	for (int j = 0; j < dim; j++)
+	{
+		total_num += class_num[j];
+		fprintf(fp, "%lf\t", class_num[j]);
+	}
+		
+	fprintf(fp, "\navg_acc\n");
+	fprintf(fp,"%lf\n",avg_acc/dim);
+	fprintf(fp, "weigth_acc\n");
+	fprintf(fp, "%lf\n", weight_acc / total_num);
+}
 template <typename Dtype>
 Dtype Net<Dtype>::ForwardFromTo(int start, int end) {
   CHECK_GE(start, 0);
   CHECK_LT(end, layers_.size());
   Dtype loss = 0;
+  int tempint = 0;
+ 
+  
   for (int i = start; i <= end; ++i) {
     // LOG(ERROR) << "Forwarding " << layer_names_[i];
     Dtype layer_loss = layers_[i]->Forward(bottom_vecs_[i], top_vecs_[i]);
     loss += layer_loss;
     if (debug_info_) { ForwardDebugInfo(i); }
   }
+  //final output debug
+  if (Get_test_flag())
+  {
+	  int blob_count = bottom_vecs_[end - 1][1]->count();
+	  const Dtype* data = bottom_vecs_[end - 1][0]->cpu_data();
+	  const Dtype* label = bottom_vecs_[end - 1][1]->cpu_data();
+	  const int dim = bottom_vecs_[end - 1][0]->count() / bottom_vecs_[end - 1][1]->count();
+
+	  for (int j = 0; j < blob_count; j++)
+	  {
+		  Dtype max_value = -1;
+		  int output_label = 0;
+		  for (int i = 0; i < dim; i++)
+		  {
+			  if (max_value < data[i + j*dim])
+			  {
+				  output_label = i;
+				  max_value = data[i + j*dim];
+			  }
+			  //printf("%lf\n", data[i + j*dim]);
+		  }
+		  if (output_label == (int)label[j])
+			  acc[(int)label[j]]++;
+		  conf_m[(int)label[j]][output_label]++;
+		  class_num[(int)label[j]]++;
+		  //for (int i = 0; i < dim; i++)
+		  //  printf("%lf\n", label[j]);
+	  }
+  }
+  
+
+  
   return loss;
 }
+template <typename Dtype>
+bool Net<Dtype>::Get_test_flag()
+{
+	return test_flag;
+}
+template <typename Dtype>
+void Net<Dtype>::Set_test_flag(bool value)
+{
+	test_flag=value;
+}
+//template <typename Dtype>
+//Dtype Net<Dtype>::ForwardFromToAcc(int start, int end, Dtype* acc, Dtype* conf_matrix) {
+//	CHECK_GE(start, 0);
+//	CHECK_LT(end, layers_.size());
+//	Dtype loss = 0;
+//	int tempint = 0;
+//	for (int i = start; i <= end; ++i) {
+//		// LOG(ERROR) << "Forwarding " << layer_names_[i];
+//		Dtype layer_loss = layers_[i]->Forward(bottom_vecs_[i], top_vecs_[i]);
+//		loss += layer_loss;
+//		if (debug_info_) { ForwardDebugInfo(i); }
+//	}
+//	//final output debug
+//	int blob_count = bottom_vecs_[end - 1][1]->count();
+//	const Dtype* data = bottom_vecs_[end - 1][0]->cpu_data();
+//	const Dtype* label = bottom_vecs_[end - 1][1]->cpu_data();
+//	const int dim = bottom_vecs_[end - 1][0]->count() / bottom_vecs_[end - 1][1]->count();
+//	for (int j = 0; j < blob_count; j++)
+//	{
+//		for (int i = 0; i < dim; i++)
+//			printf("%lf\n", data[i + j*dim]);
+//		//for (int i = 0; i < dim; i++)
+//		printf("%lf\n", label[j]);
+//	}
+//
+//
+//	return loss;
+//}
 
 template <typename Dtype>
 Dtype Net<Dtype>::ForwardFrom(int start) {
@@ -558,6 +691,8 @@ Dtype Net<Dtype>::ForwardTo(int end) {
 
 template <typename Dtype>
 const vector<Blob<Dtype>*>& Net<Dtype>::Forward(Dtype* loss) {
+	
+
   if (loss != NULL) {
     *loss = ForwardFromTo(0, layers_.size() - 1);
   } else {

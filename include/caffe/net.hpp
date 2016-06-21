@@ -23,6 +23,12 @@ namespace caffe {
 template <typename Dtype>
 class Net {
  public:
+	
+	 int Get_dimension();
+	 void Initial_conf_m();
+	 void Print_conf_m();
+	 bool Get_test_flag();
+	 void Set_test_flag(bool value);
   explicit Net(const NetParameter& param, const Net* root_net = NULL);
   explicit Net(const string& param_file, Phase phase,
       const Net* root_net = NULL);
@@ -228,6 +234,10 @@ class Net {
       const string& layer_name);
 
  protected:
+	 Dtype* acc;
+	 Dtype** conf_m;
+	 Dtype* class_num;
+	 bool test_flag=false;
   // Helpers for Init.
   /// @brief Append a new top blob to the net.
   void AppendTop(const NetParameter& param, const int layer_id,

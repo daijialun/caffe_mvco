@@ -1,11 +1,13 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
-#include <string>
+#include <cstring>
 #include <map>
+#include <string>
 #include <vector>
 
 #include "caffe/caffe.hpp"
+#include "boost/algorithm/string.hpp"
 
 using caffe::Blob;
 using caffe::Caffe;
@@ -16,6 +18,7 @@ using caffe::string;
 using caffe::Timer;
 using caffe::vector;
 using std::ostringstream;
+using caffe::Net;
 
 DEFINE_string(gpu, "",
     "Optional; run in GPU mode on given device IDs separated by ','."
@@ -28,6 +31,13 @@ DEFINE_string(model, "",
 DEFINE_string(weights, "",
     "Optional; the pretrained weights to initialize finetuning, "
     "separated by ','. Cannot be set simultaneously with snapshot.");
+
+DEFINE_string(confusion, "",
+    "Optional; set whether save confusion matrix txt.");
+
+DEFINE_int32(iterations, 50,
+    "The number of iterations to run.");
+
 
 // Parse GPU ids or use all available devices
 static void get_gpus(vector<int>* gpus) {
@@ -70,21 +80,6 @@ int device_query() {
   return 0;
 }
 
-// Load the weights from the specified caffemodel(s) into the train and
-// test nets.
-void CopyLayers(caffe::Solver<float>* solver, const std::string& model_list) {
-  std::vector<std::string> model_names;
-  boost::split(model_names, model_list, boost::is_any_of(",") );
-  for (int i = 0; i < model_names.size(); ++i) {
-    LOG(INFO) << "Finetuning from " << model_names[i];
-    solver->net()->CopyTrainedLayersFrom(model_names[i]);
-    for (int j = 0; j < solver->test_nets().size(); ++j) {
-      solver->test_nets()[j]->CopyTrainedLayersFrom(model_names[i]);
-    }
-  }
-}
-
-
 
 int main(int argc, char** argv) {
 
@@ -104,7 +99,7 @@ int main(int argc, char** argv) {
 
         // Analysis Code
         CHECK_GT(FLAGS_model.size(), 0)  << "Need a model definition to score.";
-        CHECK_GT(FLAGS_weights.size(), 0) ,< "NeedNeed model weights to score.";
+        CHECK_GT(FLAGS_weights.size(), 0) << "NeedNeed model weights to score.";
 
         vector<int> gpus;
         get_gpus(&gpus);
@@ -132,12 +127,12 @@ int main(int argc, char** argv) {
          float loss = 0;
          for(int i=0; i<FLAGS_iterations; i++)  {         // Test for FLAGS_iterations times (50 times)
                 float iter_loss;
-                const vector<Blob<float>* >& result = caffe_net.Forward(&iter_loss);
+                const vector<Blob<float>* >& result = caffe_net.Forward(&iter_loss);  // loss + accuracy
                 loss += iter_loss;
                 int idx = 0;
                 for(int j=0; j<result.size(); j++)  {
                         const float* result_vec = result[j]->cpu_data();
-                        for(int k=0; k<result[j]->count(); k++, idx++)  {
+                        for(int k=0; k<result[j]->count(); k++, idx++)  {   // loss, accuracy.cout() => 1 (top5.count()=>1)
                                 const float score = result_vec[k];
                                 if( i==0 )  {
                                         test_score.push_back(score);

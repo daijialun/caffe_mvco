@@ -130,7 +130,7 @@ int main(int argc, char** argv) {
          vector<int> test_score_output_id;
          vector<float> test_score;
          float loss = 0;
-         for(int i=0; i<FLAGS_iterations; i++)  {
+         for(int i=0; i<FLAGS_iterations; i++)  {         // Test for FLAGS_iterations times (50 times)
                 float iter_loss;
                 const vector<Blob<float>* >& result = caffe_net.Forward(&iter_loss);
                 loss += iter_loss;

@@ -534,7 +534,7 @@ void Net<Dtype>::AppendParam(const NetParameter& param, const int layer_id,
 template <typename Dtype>
 int Net<Dtype>::Get_dimension()
 {
-	const int dim = bottom_vecs_[layers_.size() - 1][0]->count() / bottom_vecs_[layers_.size() - 1][1]->count();
+	const int dim = bottom_vecs_[layers_.size() - 1][0]->count() / bottom_vecs_[layers_.size() - 1][1]->count() + 1;
 	
 	return dim;
 }
@@ -597,9 +597,7 @@ Dtype Net<Dtype>::ForwardFromTo(int start, int end) {
   CHECK_GE(start, 0);
   CHECK_LT(end, layers_.size());
   Dtype loss = 0;
-  int tempint = 0;
  
-  
   for (int i = start; i <= end; ++i) {
     // LOG(ERROR) << "Forwarding " << layer_names_[i];
     Dtype layer_loss = layers_[i]->Forward(bottom_vecs_[i], top_vecs_[i]);

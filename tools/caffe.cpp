@@ -14,7 +14,8 @@ namespace bp = boost::python;
 #include "boost/algorithm/string.hpp"
 #include "caffe/caffe.hpp"
 #include "caffe/util/signal_handler.h"
-
+#include <opencv/cv.h>
+#include <opencv/highgui.h>
 using caffe::Blob;
 using caffe::Caffe;
 using caffe::Net;
@@ -148,6 +149,7 @@ caffe::SolverAction::Enum GetRequestedAction(
     return caffe::SolverAction::NONE;
   }
   LOG(FATAL) << "Invalid signal effect \""<< flag_value << "\" was specified";
+  return caffe::SolverAction::NONE;
 }
 
 // Train / Finetune a model.
@@ -254,10 +256,17 @@ int test() {
   vector<int> test_score_output_id;
   vector<float> test_score;
   float loss = 0;
+  caffe_net.Set_test_flag(1);
+  caffe_net.Initial_conf_m();
+
   for (int i = 0; i < FLAGS_iterations; ++i) {
     float iter_loss;
     const vector<Blob<float>*>& result =
-        caffe_net.Forward(&iter_loss);
+        caffe_net.Forward(&iter_loss);  //
+  //caffe_net.bottom_vecs[10]->
+  /*double* prob_data = caffe_net.bottom_vecs[10];
+  for (int i = 0; i < 10; i++)
+   printf("%lf\n", prob_data[i]);*/
     loss += iter_loss;
     int idx = 0;
     for (int j = 0; j < result.size(); ++j) {
@@ -291,7 +300,7 @@ int test() {
     }
     LOG(INFO) << output_name << " = " << mean_score << loss_msg_stream.str();
   }
-
+  caffe_net.Print_conf_m();
   return 0;
 }
 RegisterBrewFunction(test);
@@ -387,6 +396,7 @@ int time() {
 RegisterBrewFunction(time);
 
 int main(int argc, char** argv) {
+  //cvNamedWindow("Image", 1);
   // Print output to stderr (while still logging).
   FLAGS_alsologtostderr = 1;
   // Set version
@@ -416,3 +426,7 @@ int main(int argc, char** argv) {
     gflags::ShowUsageWithFlagsRestrict(argv[0], "tools/caffe");
   }
 }
+//train --solver=cifar10_quick_solver.prototxt
+//test -model=cifar10_quick_train_test.prototxt -weights=cifar10_quick_iter_4000.caffemodel.h5
+//  train --solver=lenet_solver.prototxt
+//  test -model=lenet_train_test.prototxt -weights=lenet_iter_10000.caffemodel

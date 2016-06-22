@@ -8,6 +8,11 @@
 
 #include "caffe/caffe.hpp"
 #include "boost/algorithm/string.hpp"
+#include <iostream>
+#include <fstream>
+#include <map>
+#include <utility>
+#include <algorithm>
 
 using caffe::Blob;
 using caffe::Caffe;
@@ -42,6 +47,8 @@ DEFINE_string(labels, "",
     "Optional: the names of each class for classification, "
     "default form is expressed by numbers");
 
+DEFINE_int32(top, 5,
+    "Optional: the top correct and wrong class name.");
 
 
 // Parse GPU ids or use all available devices
@@ -128,7 +135,7 @@ int main(int argc, char** argv) {
          LOG(INFO) << "Running for " << FLAGS_iterations << " iterations.";
 
           int layer_acy = 0;
-          LOG(INFO) << "Layer: " << caffe_net.layers().size();
+          //LOG(INFO) << "Layer: " << caffe_net.layers().size();
           for( int layer_i=0; layer_i<caffe_net.layers().size(); layer_i++ )  {
               if( string(caffe_net.layers()[layer_i]->type())=="Accuracy" 
                         || string(caffe_net.layers()[layer_i]->type())=="SoftMaxLoss")  {
@@ -139,69 +146,172 @@ int main(int argc, char** argv) {
          //CHECK_LE( layer_i, caffe_net.layers().size() ) << "Please confirm accuracy or softmaxloss layer in prototxt";
          CHECK_GT(layer_acy, 0) << "Please confirm accuracy or softmaxloss layer in prototxt";
 
-         CHECK_EQ(caffe_net.bottom_vecs()[layer_acy], 2) << "Accuracy Layer input blob size must be 2"; 
+         CHECK_EQ(caffe_net.bottom_vecs()[layer_acy].size(), 2) << "Accuracy Layer input blob size must be 2"; 
         //LOG(INFO) << "Bottom Vectors Size: " << caffe_net.bottom_vecs().size();
 
-        //LOG(INFO) << ""
-         /*vector<string> layername = caffe_net.layer_names();
-          LOG(INFO) << "Layer: " << layername.size();
-          for(int i=0; i<layername.size(); i++)  {
-              LOG(INFO) << layername[i];
-          }*/
-         //for( auto layer_i:caffe_net)  {
-         //       if( layer_i->type()=="Accuracy" || layer_i->type()=="SoftMaxLoss")
-         //}
-          /*vector<string> layername = caffe_net.layer_names();
-          LOG(INFO) << "Layer: " << layername.size();
-          for(int i=0; i<layername.size(); i++)  {
-              LOG(INFO) << layername[i];
-          }
 
-          vector<string> blobname = caffe_net.blob_names ();
-          LOG(INFO) << "Blob: " << blobname.size();
-          for(int i=0; i<blobname.size(); i++)  {
-              LOG(INFO) << blobname[i];
-          }*/
+          // ******** Initial Setting ******** //
+          const int num_labels = caffe_net.bottom_vecs()[layer_acy][0]->channels();
+          const int dim = caffe_net.bottom_vecs()[layer_acy][0]->count() / \
+                        caffe_net.bottom_vecs()[layer_acy][1]->count();
+          const int batch_size = caffe_net.bottom_vecs()[layer_acy][0]->num();
 
-         /*vector<int> test_score_output_id;
-         vector<float> test_score;
-         float loss = 0;
-         for(int i=0; i<FLAGS_iterations; i++)  {         // Test for FLAGS_iterations times (50 times)
+          // ********** Accuracy and Loss Initialization ********** //
+          vector<int> test_score_output_id;
+          vector<float> test_score;
+          float loss = 0;
+
+           // ********** Confusion Matrix Initialization ********** //
+          int confus_matrix[dim+1][dim+1];
+          for(int i=0; i<dim+1; i++)
+              for(int j=0; j<dim+1; j++)  
+                  confus_matrix[i][j]=0;
+           std::ofstream out("confusion.txt");
+           out.clear();
+
+          
+
+           // ********** Main Model ********** //
+          for(int k=0; k<FLAGS_iterations; k++)  { 
                 float iter_loss;
                 const vector<Blob<float>* >& result = caffe_net.Forward(&iter_loss);  // Forward return net_output_blobs_=>loss + accuracy
-                loss += iter_loss;                                                                                    // loss,accuracy->count()=1, softmax->count()=labels.size()
+                loss += iter_loss;
                 int idx = 0;
-                for(int j=0; j<result.size(); j++)  {
-                        const float* result_vec = result[j]->cpu_data();
-                        for(int k=0; k<result[j]->count(); k++, idx++)  {   // loss, accuracy.cout() => 1 (top5.count()=>1)
-                                const float score = result_vec[k];
-                                if( i==0 )  {
+
+
+                // ********** Part1: Accuracy and Loss ********** //
+                for(int i=0; i<result.size(); i++)  {
+                        const float* result_vec = result[i]->cpu_data();
+                        for(int j=0; j<result[i]->count(); j++, idx++)  {   // loss, accuracy.cout() => 1 (top5.count()=>1)
+                                const float score = result_vec[j];
+                                if( k==0 )  {
                                         test_score.push_back(score);
-                                        test_score_output_id.push_back(j);
+                                        test_score_output_id.push_back(i);
                                 }  else {
                                         test_score[idx] += score;
                                 }
-                                const std::string& output_name = caffe_net.blob_names()[
-                                                caffe_net.output_blob_indices()[j]];
-                                LOG(INFO) << "Batch " << i << ", " << output_name << " = " << score;
+                                //const std::string& output_name = caffe_net.blob_names()[
+                                //                caffe_net.output_blob_indices()[j]];
+                                //LOG(INFO) << "Batch " << i << ", " << output_name << " = " << score;
                         }
                 }
-         }
-         loss /= FLAGS_iterations;
-         LOG(INFO)  << "Loss: " << loss;
-         for(int i=0; i<test_score.size(); i++)  {
-                const std::string& output_name = caffe_net.blob_names()[
-                          caffe_net.output_blob_indices()[test_score_output_id[i]]];
-                const float loss_weight = caffe_net.blob_loss_weights()[
-                          caffe_net.output_blob_indices()[test_score_output_id[i]]];
-                std::ostringstream loss_msg_stream;
-                const float mean_score = test_score[i] / FLAGS_iterations;
-                if (loss_weight) {
-                        loss_msg_stream << " (* " << loss_weight
-                                << " = " << loss_weight * mean_score << " loss)";
+
+
+                // ********** Part2: Confusion Matrix ********** //
+                Blob<float>* blobOutput =  caffe_net.bottom_vecs()[layer_acy][0];   //LOG(INFO)  << blobOutput->count();  50x30x1x1
+                Blob<float>* blobLabel =  caffe_net.bottom_vecs()[layer_acy][1];      //LOG(INFO) << blobLabel->count();      50x1x1x1
+                //#ifdef CPU_ONLY                
+                const float* bottom_data = blobOutput->cpu_data();
+                const float* bottom_label = blobLabel->cpu_data();
+                //#else
+                //const float* bottom_data = blobOutput->gpu_data();
+                //const float* bottom_label = blobLabel->gpu_data();//#endif
+
+                for(int i=0; i<batch_size; i++)  {     
+                      float max_value = -1;
+                      int label_output = 0;
+                      const int label_actual = static_cast<int>(bottom_label[i]);
+                      for(int j=0; j<dim; j++)  {   
+                                if( max_value < bottom_data[ i*dim+j ])  {
+                                        max_value = bottom_data[ i*dim+j ];
+                                        label_output = j;
+                                }
+                      }
+                      confus_matrix[label_actual][label_output]++;
                 }
-                LOG(INFO) << output_name << " = " << mean_score << loss_msg_stream.str();
-          }*/
+
+          }
+
+
+            // ********** Average Accuracy and Loss Compuation ********** //
+            loss /= FLAGS_iterations;
+           LOG(INFO)  << "Loss: " << loss;
+           for(int i=0; i<test_score.size(); i++)  {
+                  const std::string& output_name = caffe_net.blob_names()[
+                            caffe_net.output_blob_indices()[test_score_output_id[i]]];
+                  const float loss_weight = caffe_net.blob_loss_weights()[
+                            caffe_net.output_blob_indices()[test_score_output_id[i]]];
+                  std::ostringstream loss_msg_stream;
+                  const float mean_score = test_score[i] / FLAGS_iterations;
+                  if (loss_weight) {
+                          loss_msg_stream << " (* " << loss_weight
+                                  << " = " << loss_weight * mean_score << " loss)";
+                  }
+                  LOG(INFO) << output_name << " = " << mean_score << loss_msg_stream.str();
+            }
+
+
+          // ********** Confusion Matrix Computation ********** //
+          for(int i=0; i<dim; i++)  {
+                for(int j=0; j<dim; j++)   {
+                      confus_matrix[i][dim] += confus_matrix[i][j];
+                      confus_matrix[dim][i] += confus_matrix[j][i];
+                }
+                confus_matrix[dim][dim] += confus_matrix[dim][i];
+           }
+
+
+           // ********** Analyse Top Correct and Top Wrong ********** //
+           vector<std::pair<int, float> > id_accuracy;
+           float average_accuracy=0;
+           vector<string> class_names;
+           vector<int> class_num;
+           for(int i=0; i<dim; i++)  {
+                id_accuracy.push_back( std::pair<int, float>(i, static_cast<float>(confus_matrix[i][i])/static_cast<float>(confus_matrix[i][dim]) ) );
+                class_num.push_back(confus_matrix[i][dim]);
+                average_accuracy += id_accuracy[i].second;
+            }
+            average_accuracy /= num_labels;
+            if(FLAGS_labels.size()>0)  {
+                  std::ifstream labels_file(FLAGS_labels);
+                  CHECK_EQ(labels_file.is_open(), 1) << "Please confirm the labels txt exist.";
+                  string class_name;
+                  while( getline(labels_file, class_name) )  
+                          class_names.push_back(class_name);
+            }  else  {
+                  for(int i=0; i<num_labels; i++)  {
+                        string class_name; 
+                        std::stringstream ss;
+                        ss << i+1;
+                        class_name = ss.str() + "th_class";
+                        class_names.push_back(class_name);
+                  }
+            }
+            vector<std::pair<int, float> > top_correct(id_accuracy);
+            vector<std::pair<int, float> > top_wrong(id_accuracy);
+            //std::map<int, float> top_correct(id_accuracy);
+            //std::map<int, float> top_wrong(id_accuracy);
+            std::sort(top_correct.begin(), top_correct.end(), [](const std::pair<int, float> &a, const std::pair<int, float> &b) { return a.second > b.second;});
+            std::sort(top_wrong.begin(), top_wrong.end(), [](const std::pair<int, float> &a, const std::pair<int, float> &b) { return a.second < b.second;});
+             LOG(INFO) << "Top 5 Correct Class: ";
+            for(int i=0; i<5; i++)  {
+                  LOG(INFO) << i+1 << ": " << class_names[top_correct[i].first] << top_correct[i].second;
+            }
+            LOG(INFO) << "Top 5 Wrong Class: ";
+            for(int i=0; i<5; i++)  {
+                  LOG(INFO) << i+1 << ": " << class_names[top_wrong[i].first] << top_wrong[i].second;
+            }
+
+        
+        // ********** Write Confusion Matrix To File ********** //
+
+            for(int i=0; i<dim+1; i++)  {
+                  for(int j=0; j<dim+1; j++)   {
+                      //std::cout.setf(std::ios::left); 
+                      out.setf(std::ios::right);
+                      out <<"\t" << confus_matrix[i][j];
+                  }
+                  if(i==dim)  
+                        out << "\t" << average_accuracy <<"\n";
+                   else
+                        out << "\t" << id_accuracy[i].second <<"\n";
+             }
+             LOG(INFO) << "Confusion matrix txt has been written.";
+
+             for(auto i:id_accuracy)  
+                  std::cout <<i.second << " ";
+
+           
           return 0;
 }
 

@@ -29,37 +29,42 @@ DEFINE_string(model, "",
     "The model definition protocol buffer text file..");
 
 DEFINE_string(weights, "",
-    "Optional; the pretrained weights to initialize finetuning, "
+    "The pretrained weights to initialize finetuning, "
     "separated by ','. Cannot be set simultaneously with snapshot.");
 
-DEFINE_string(confusion, "",
+DEFINE_bool(confusion, false,
     "Optional; set whether save confusion matrix txt.");
 
 DEFINE_int32(iterations, 50,
     "The number of iterations to run.");
 
+DEFINE_string(labels, "",
+    "Optional: the names of each class for classification, "
+    "default form is expressed by numbers");
+
+
 
 // Parse GPU ids or use all available devices
 static void get_gpus(vector<int>* gpus) {
-  if (FLAGS_gpu == "all") {
-    int count = 0;
-#ifndef CPU_ONLY
-    CUDA_CHECK(cudaGetDeviceCount(&count));
-#else
-    NO_GPU;
-#endif
-    for (int i = 0; i < count; ++i) {
-      gpus->push_back(i);
+    if (FLAGS_gpu == "all") {
+          int count = 0;
+    #ifndef CPU_ONLY
+          CUDA_CHECK(cudaGetDeviceCount(&count));
+    #else
+          NO_GPU;
+    #endif
+          for (int i = 0; i < count; ++i) {
+                gpus->push_back(i);
+          }
+    } else if (FLAGS_gpu.size()) {
+                  vector<string> strings;
+                  boost::split(strings, FLAGS_gpu, boost::is_any_of(","));
+                  for (int i = 0; i < strings.size(); ++i) {
+                  gpus->push_back(boost::lexical_cast<int>(strings[i]));
+              }
+    } else {
+            CHECK_EQ(gpus->size(), 0);
     }
-  } else if (FLAGS_gpu.size()) {
-    vector<string> strings;
-    boost::split(strings, FLAGS_gpu, boost::is_any_of(","));
-    for (int i = 0; i < strings.size(); ++i) {
-      gpus->push_back(boost::lexical_cast<int>(strings[i]));
-    }
-  } else {
-    CHECK_EQ(gpus->size(), 0);
-  }
 }
 
 // caffe commands to call by
@@ -70,12 +75,12 @@ static void get_gpus(vector<int>* gpus) {
 
 // Device Query: show diagnostic information for a GPU device.
 int device_query() {
-  LOG(INFO) << "Querying GPUs " << FLAGS_gpu;
-  vector<int> gpus;
-  get_gpus(&gpus);
-  for (int i = 0; i < gpus.size(); ++i) {
-    caffe::Caffe::SetDevice(gpus[i]);
-    caffe::Caffe::DeviceQuery();
+        LOG(INFO) << "Querying GPUs " << FLAGS_gpu;
+        vector<int> gpus;
+        get_gpus(&gpus);
+        for (int i = 0; i < gpus.size(); ++i) {
+        caffe::Caffe::SetDevice(gpus[i]);
+        caffe::Caffe::DeviceQuery();
   }
   return 0;
 }
@@ -122,13 +127,49 @@ int main(int argc, char** argv) {
         caffe_net.CopyTrainedLayersFrom(FLAGS_weights);
          LOG(INFO) << "Running for " << FLAGS_iterations << " iterations.";
 
-         vector<int> test_score_output_id;
+          int layer_acy = 0;
+          LOG(INFO) << "Layer: " << caffe_net.layers().size();
+          for( int layer_i=0; layer_i<caffe_net.layers().size(); layer_i++ )  {
+              if( string(caffe_net.layers()[layer_i]->type())=="Accuracy" 
+                        || string(caffe_net.layers()[layer_i]->type())=="SoftMaxLoss")  {
+                    layer_acy = layer_i;
+                    break;
+              }
+         }
+         //CHECK_LE( layer_i, caffe_net.layers().size() ) << "Please confirm accuracy or softmaxloss layer in prototxt";
+         CHECK_GT(layer_acy, 0) << "Please confirm accuracy or softmaxloss layer in prototxt";
+
+         CHECK_EQ(caffe_net.bottom_vecs()[layer_acy], 2) << "Accuracy Layer input blob size must be 2"; 
+        //LOG(INFO) << "Bottom Vectors Size: " << caffe_net.bottom_vecs().size();
+
+        //LOG(INFO) << ""
+         /*vector<string> layername = caffe_net.layer_names();
+          LOG(INFO) << "Layer: " << layername.size();
+          for(int i=0; i<layername.size(); i++)  {
+              LOG(INFO) << layername[i];
+          }*/
+         //for( auto layer_i:caffe_net)  {
+         //       if( layer_i->type()=="Accuracy" || layer_i->type()=="SoftMaxLoss")
+         //}
+          /*vector<string> layername = caffe_net.layer_names();
+          LOG(INFO) << "Layer: " << layername.size();
+          for(int i=0; i<layername.size(); i++)  {
+              LOG(INFO) << layername[i];
+          }
+
+          vector<string> blobname = caffe_net.blob_names ();
+          LOG(INFO) << "Blob: " << blobname.size();
+          for(int i=0; i<blobname.size(); i++)  {
+              LOG(INFO) << blobname[i];
+          }*/
+
+         /*vector<int> test_score_output_id;
          vector<float> test_score;
          float loss = 0;
          for(int i=0; i<FLAGS_iterations; i++)  {         // Test for FLAGS_iterations times (50 times)
                 float iter_loss;
-                const vector<Blob<float>* >& result = caffe_net.Forward(&iter_loss);  // loss + accuracy
-                loss += iter_loss;
+                const vector<Blob<float>* >& result = caffe_net.Forward(&iter_loss);  // Forward return net_output_blobs_=>loss + accuracy
+                loss += iter_loss;                                                                                    // loss,accuracy->count()=1, softmax->count()=labels.size()
                 int idx = 0;
                 for(int j=0; j<result.size(); j++)  {
                         const float* result_vec = result[j]->cpu_data();
@@ -160,7 +201,7 @@ int main(int argc, char** argv) {
                                 << " = " << loss_weight * mean_score << " loss)";
                 }
                 LOG(INFO) << output_name << " = " << mean_score << loss_msg_stream.str();
-          }
+          }*/
           return 0;
 }
 

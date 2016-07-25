@@ -40,7 +40,7 @@ DEFINE_string(weights, "",
 DEFINE_bool(accuracy, true,
       "Optional; set whether test the accuracy and loss value of model.");
 
-DEFINE_bool(confusion, false,
+DEFINE_string(confusion, "",
       "Optional; set whether save confusion matrix txt.");
 
 DEFINE_bool(top, false,
@@ -116,7 +116,7 @@ int main(int argc, char** argv) {
        "  weights 		The pretrained model to analyse performace."
        "  gpus 		The GPU device used for analysis."
        "  accuracy        Set whether output accuracy and loss"
-       "  confusion      Set whether generate confusion matrix txt"
+       "  confusion      Set the path to save confusion matrix txt"
        "  top                 Set whether output top correct and wrong classes"
        "  wrong            Set whether output which wrong class that the class is classied into"
        "  labels             Optional: The class name of each class "
@@ -149,8 +149,8 @@ int main(int argc, char** argv) {
        caffe_net.CopyTrainedLayersFrom(FLAGS_weights);
        LOG(INFO) << "Running for " << FLAGS_iterations << " iterations.";
 
+       // Default: Only one accuracy, if the number of accuracy layer is more than one, please use vector<int> layer_acy;
        int layer_acy = 0;
-       //LOG(INFO) << "Layer: " << caffe_net.layers().size();
        for( int layer_i=0; layer_i<caffe_net.layers().size(); layer_i++ )  {
              if( string(caffe_net.layers()[layer_i]->type())=="Accuracy" 
                     || string(caffe_net.layers()[layer_i]->type())=="SoftMaxLoss")  {
@@ -210,7 +210,7 @@ int main(int argc, char** argv) {
 
 
              // ********** Part2: Confusion Matrix ********** //
-             if(FLAGS_confusion || FLAGS_top)  {
+             if(FLAGS_confusion.size()>0 || FLAGS_top)  {
                      Blob<float>* blobOutput =  caffe_net.bottom_vecs()[layer_acy][0];   //LOG(INFO)  << blobOutput->count();  50x30x1x1
                      Blob<float>* blobLabel =  caffe_net.bottom_vecs()[layer_acy][1];      //LOG(INFO) << blobLabel->count();      50x1x1x1
                      //#ifdef CPU_ONLY                
@@ -263,7 +263,7 @@ int main(int argc, char** argv) {
        vector<int> class_num;
        vector<std::pair<int, float> > id_accuracy;
        float average_accuracy=0;
-       if(FLAGS_confusion || FLAGS_top)  {
+       if(FLAGS_confusion.size()>0 || FLAGS_top)  {
              
              for(int i=0; i<dim; i++)  {
                    for(int j=0; j<dim; j++)   {
@@ -280,11 +280,13 @@ int main(int argc, char** argv) {
              }
              average_accuracy /= num_labels;
         
-             if(FLAGS_confusion)  {
+             if(FLAGS_confusion.size()>0)  {
                    LOG(INFO) << " ";
                    LOG(INFO) << "## Confusion Matrix Computation: ##";
 
-                    std::ofstream out("confusion.txt");
+                    //std::string name_out_file = std::string(FLAGS_confusion) + "confusion.txt";
+                    std::ofstream out(FLAGS_confusion);
+                    CHECK_EQ( out.is_open(), 1) << "Confusion output must can be opened txt file.";
                     out.clear();
 
                     for(int i=0; i<dim+1; i++)  {

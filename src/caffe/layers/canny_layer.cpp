@@ -101,6 +101,9 @@ namespace caffe {
                 } // batch_size
              } // bottom.size()
    }
+#ifdef CPU_ONLY
+STUB_GPU(CannyLayer);
+#endif
 
 INSTANTIATE_CLASS(CannyLayer);
 REGISTER_LAYER_CLASS(Canny);

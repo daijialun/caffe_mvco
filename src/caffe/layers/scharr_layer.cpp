@@ -87,6 +87,11 @@ namespace caffe {
        } // bottom.size()
    }
 
+#ifdef CPU_ONLY
+STUB_GPU(ScharrLayer);
+#endif
+
+
 INSTANTIATE_CLASS(ScharrLayer);
 REGISTER_LAYER_CLASS(Scharr);
 } // namespace caffe

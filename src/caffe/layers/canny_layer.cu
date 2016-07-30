@@ -3,6 +3,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/cudaimgproc.hpp>
 #include <opencv2/cudaarithm.hpp>
+#include <opencv2/cudafilters.hpp>
 #include <opencv2/cudev.hpp>
 
 #include "caffe/layers/canny_layer.hpp"
@@ -38,21 +39,23 @@ namespace caffe {
                       bottom_image_data += height*width;
                     }
                      // 将bottom_image_data 转化为 Mat 图像
-                    cv::cudev::GpuMat img;
+                    cv::cuda::GpuMat img;
                     cv::cuda::merge(channels, img);
-                    img.convertTo(img, CV_8U);
+                    img.convertTo(img, CV_8UC1);
                     
                     // ******* Canny  ******* //
-                    cv::cudev::GpuMat CannyEdge;
-                    cv::cuda::bilateralFilter(img, CannyEdge, 15, 15*2, 15/2);
-                    cv::Ptr<cv::cuda::CannyEdgeDetector> canny = cv::cuda::createCannyEdgeDetector(15, 45);
-                    canny->detect( img, CannyEdge);
+                    cv::cuda::GpuMat gfilter, CannyEdge, gdst;
+                    cv::Ptr<cv::cuda::Filter> filter = cv::cuda::createBoxFilter(CV_8UC1, CV_8UC1, cv::Size(3,3));
+                    filter->apply(img, gfilter);
+                    cv::Ptr<cv::cuda::CannyEdgeDetector> canny = cv::cuda::createCannyEdgeDetector(15, 45, 3);
+                    canny->detect( gfilter, CannyEdge);
+                    cv::cuda::bilateralFilter(CannyEdge, gdst, 15, 15*2, 15/2);
 
                     // 将 Mat 图像 img 转化为 top_blob
                     int top_index=0;                  
                     Dtype* top_image_data = top[i]->mutable_gpu_data() + top[i]->offset(n);
                     for(int h=0; h<height; ++h)  {
-                         uchar* ptr = CannyEdge.ptr<uchar>(h);
+                         uchar* ptr = gdst.ptr<uchar>(h);
                          int img_index=0;
                          for(int c=0; c<channel_num; ++c)  {
                                 for(int w=0; w<width; ++w)  {

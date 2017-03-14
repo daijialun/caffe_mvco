@@ -9,6 +9,9 @@
 #include "caffe/util/io.hpp"
 #include "caffe/util/math_functions.hpp"
 #include "caffe/util/rng.hpp"
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 
 namespace caffe {
 
@@ -125,6 +128,8 @@ void DataTransformer<Dtype>::Transform(const Datum& datum,
     }
   }
 }
+
+
 
 
 template<typename Dtype>
@@ -323,7 +328,188 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
     }
   }
 }
+
+
+// ****** Tranform Image to Three Transformed ******* //
+template<typename Dtype>
+void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
+                                       vector<Blob<Dtype>> &transformed_blob) {
+  const int crop_size = param_.crop_size();
+  const int img_channels = cv_img.channels();
+  const int img_height = cv_img.rows;
+  const int img_width = cv_img.cols;
+
+  // Check dimensions.
+  const int channels = transformed_blob[0].channels();
+  const int height = transformed_blob[0].height();
+  const int width = transformed_blob[0].width();
+  const int num = transformed_blob[0].num();
+
+  CHECK_EQ(channels, img_channels);
+  CHECK_LE(height, img_height);
+  CHECK_LE(width, img_width);
+  CHECK_GE(num, 1);
+
+  CHECK(cv_img.depth() == CV_8U) << "Image data type must be unsigned byte";
+
+  const Dtype scale = param_.scale();
+  const bool do_mirror = param_.mirror() && Rand(2);
+  const bool has_mean_file = param_.has_mean_file();
+  const bool has_mean_values = mean_values_.size() > 0;
+
+  CHECK_GT(img_channels, 0);
+  CHECK_GE(img_height, crop_size);
+  CHECK_GE(img_width, crop_size);
+
+  Dtype* mean = NULL;
+  if (has_mean_file) {
+    CHECK_EQ(img_channels, data_mean_.channels());
+    CHECK_EQ(img_height, data_mean_.height());
+    CHECK_EQ(img_width, data_mean_.width());
+    mean = data_mean_.mutable_cpu_data();
+  }
+  if (has_mean_values) {
+    CHECK(mean_values_.size() == 1 || mean_values_.size() == img_channels) <<
+     "Specify either 1 mean_value or as many as channels: " << img_channels;
+    if (img_channels > 1 && mean_values_.size() == 1) {
+      // Replicate the mean_value for simplicity
+      for (int c = 1; c < img_channels; ++c) {
+        mean_values_.push_back(mean_values_[0]);
+      }
+    }
+  }
+
+  int h_off = 0;
+  int w_off = 0;
+  cv::Mat cv_cropped_origin = cv_img;
+
+  // ****** Transform Origin to Local ****** //
+  cv::Mat cv_canny_img, cv_local;
+  cv::blur( cv_img, cv_canny_img, cv::Size(3,3) );
+  cv::Canny( cv_canny_img, cv_canny_img, 15, 15*3, 3 );
+  cv::Mat cv_canny_dst(cv_img.size(), cv_img.type());
+  cv_canny_dst = cv::Scalar::all(0);
+  cv_img.copyTo( cv_canny_dst, cv_canny_img);
+  cv::bilateralFilter(cv_canny_img, cv_local, 15, 15*2, 15/2 );
+  cv::Mat cv_cropped_local = cv_local;
+  // ****** Transform Origin to Local ****** //
+
+
+  // ****** Transform Origin to Global ****** //
+  cv::Mat cv_filter, cv_global;
+  cv::bilateralFilter(cv_img, cv_filter, 10, 10*2, 10/2 );
+  cv::Mat scharrGX, scharrGY;
+  cv::Mat scharrAGX, scharrAGY;
+  cv::Scharr(cv_filter, scharrGX, CV_16S, 1, 0, 1, 0, cv::BORDER_DEFAULT );
+  cv::convertScaleAbs(scharrGX, scharrAGX);
+  cv::Scharr(cv_filter, scharrGY, CV_16S, 0, 1, 1, 0, cv::BORDER_DEFAULT);
+  cv::convertScaleAbs(scharrGY, scharrAGY);
+  cv::addWeighted(scharrAGX, 0.5, scharrAGY, 0.5, 0, cv_global);
+  cv::Mat cv_cropped_global = cv_global;
+  // ****** Transform Origin to Global ****** //
+
+
+
+
+
+ // cv::Mat cv_cropped_img = cv_img;
+  if (crop_size) {
+    CHECK_EQ(crop_size, height);
+    CHECK_EQ(crop_size, width);
+    // We only do random crop when we do training.
+    if (phase_ == TRAIN) {
+      h_off = Rand(img_height - crop_size + 1);
+      w_off = Rand(img_width - crop_size + 1);
+    } else {
+      h_off = (img_height - crop_size) / 2;
+      w_off = (img_width - crop_size) / 2;
+    }
+    cv::Rect roi(w_off, h_off, crop_size, crop_size);
+    cv_cropped_origin = cv_img(roi);
+    cv_cropped_local = cv_local(roi);
+    cv_cropped_global = cv_global(roi);
+  } else {
+    CHECK_EQ(img_height, height);
+    CHECK_EQ(img_width, width);
+  }
+
+  CHECK(cv_cropped_origin.data);
+  CHECK(cv_cropped_local.data);
+  CHECK(cv_cropped_global.data);
+
+  Dtype* transformed_origin = transformed_blob[0].mutable_cpu_data();
+  Dtype* transformed_local = transformed_blob[1].mutable_cpu_data();
+  Dtype* transformed_global = transformed_blob[2].mutable_cpu_data();
+
+  int top_index;
+  for (int h = 0; h < height; ++h) {
+    const uchar* ptr = cv_cropped_origin.ptr<uchar>(h);
+    int img_index = 0;
+    for (int w = 0; w < width; ++w) {
+      for (int c = 0; c < img_channels; ++c) {
+        if (do_mirror) {
+          top_index = (c * height + h) * width + (width - 1 - w);
+        } else {
+          top_index = (c * height + h) * width + w;
+        }
+        // int top_index = (c * height + h) * width + w;
+        Dtype pixel = static_cast<Dtype>(ptr[img_index++]);
+        if (has_mean_file) {
+          int mean_index = (c * img_height + h_off + h) * img_width + w_off + w;
+          transformed_origin[top_index] =
+            (pixel - mean[mean_index]) * scale;
+        } else {
+          if (has_mean_values) {
+            transformed_origin[top_index] =
+              (pixel - mean_values_[c]) * scale;
+          } else {
+            transformed_origin[top_index] = pixel * scale;
+          }
+        }
+      }
+    }
+  }
+
+  int top_index_local;
+  for (int h = 0; h < height; ++h) {
+    const uchar* ptr = cv_cropped_local.ptr<uchar>(h);
+    int img_index = 0;
+    for (int w = 0; w < width; ++w) {
+      for (int c = 0; c < img_channels; ++c) {
+        if (do_mirror) {
+          top_index_local = (c * height + h) * width + (width - 1 - w);
+        } else {
+          top_index_local = (c * height + h) * width + w;
+        }
+        // int top_index = (c * height + h) * width + w;
+        Dtype pixel = static_cast<Dtype>(ptr[img_index++]);
+        transformed_local[top_index_local] = pixel * scale;
+      }
+    }
+  }
+
+  int top_index_global;
+  for (int h = 0; h < height; ++h) {
+    const uchar* ptr = cv_cropped_global.ptr<uchar>(h);
+    int img_index = 0;
+    for (int w = 0; w < width; ++w) {
+      for (int c = 0; c < img_channels; ++c) {
+        if (do_mirror) {
+          top_index_global = (c * height + h) * width + (width - 1 - w);
+        } else {
+          top_index_global = (c * height + h) * width + w;
+        }
+        // int top_index = (c * height + h) * width + w;
+        Dtype pixel = static_cast<Dtype>(ptr[img_index++]);
+        transformed_global[top_index_global] = pixel * scale;
+      }
+    }
+  }
+
+}
+// ****** Tranform Image to Three Transformed ******* //
 #endif  // USE_OPENCV
+
 
 template<typename Dtype>
 void DataTransformer<Dtype>::Transform(Blob<Dtype>* input_blob,
